@@ -7,16 +7,30 @@ Console.WriteLine("Logs from your program will appear here!");
 TcpListener server = new TcpListener(IPAddress.Any, 4221);
 server.Start();
 
-Byte[] bytes = new Byte[256];
-String data = null;
+while (true) {
+    using TcpClient client = server.AcceptTcpClient();
+    NetworkStream stream = client.GetStream();
 
-using TcpClient client = server.AcceptTcpClient(); // wait for client
+    Byte[] buffer = new Byte[256];
+    stream.Read(buffer, 0, buffer.Length);
+    String data = System.Text.Encoding.ASCII.GetString(buffer);
+    if (data == "") {
+        continue;
+    }
 
-data = null;
+    String[] fields = data.Split("\r\n");
+    if (fields.Length == 0) {
+        continue;
+    }
 
-NetworkStream stream = client.GetStream();
+    String[] requestLine = fields[0].Split(' ');
+    String response = "HTTP/1.1 404 Not Found\r\n\r\n";
+    if (requestLine.Length == 3) {
+        if (requestLine[1] == "/") {
+            response = "HTTP/1.1 200 OK\r\n\r\n";
+        }
+    }
 
-data = "HTTP/1.1 200 OK\r\n\r\n";
-byte[] msg = System.Text.Encoding.ASCII.GetBytes(data);
-
-stream.Write(msg, 0, msg.Length);
+    byte[] msg = System.Text.Encoding.ASCII.GetBytes(response);
+    stream.Write(msg, 0, msg.Length);
+}
